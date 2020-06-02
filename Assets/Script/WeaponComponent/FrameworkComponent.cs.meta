@@ -3,7 +3,12 @@ guid: 06562199a25d00e499d20de7e5e552d6
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - ConnectorIndicatorSprite: {fileID: 21300000, guid: 483133f63bbaa8c42b8f047a419391dd,
+      type: 3}
+  - ComponentSprite: {instanceID: 0}
+  - SpriteTransform: {instanceID: 0}
+  - ParentConnectorTransform: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

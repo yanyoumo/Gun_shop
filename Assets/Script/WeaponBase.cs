@@ -6,12 +6,14 @@ namespace GunShop
 {
     public class Connector
     {
-        public Vector2 PhysicalXyOffsetToHost = Vector2.zero;
-        //public Transform LocalTransformFromHost;
+        //public Vector2 PhysicalXyOffsetToHost = Vector2.zero;
+        public Transform LocalTransformFromHost;
         public Connectable Host;
         public Connectable Device;
         public Connector OtherConnector;
-        
+
+        public GameObject NodeGO => LocalTransformFromHost.gameObject;
+
         public static bool ConnectConnector(Connector parent, Connector child)
         {
             parent.Device = child.Host;
@@ -24,56 +26,61 @@ namespace GunShop
 
     public abstract class Connectable : MonoBehaviour
     {
-        //public const int ConnectorCount = 1;    
+        //public const int ConnectorCount = 1;
+        public bool ShowSubConnectorIdc;
         public Connector ParentConnector { protected set; get; }
         public Connector[] ChildConnectors { protected set; get; }
         public virtual bool IsRootConnectable => false;
         public virtual bool AllowSubConnection => false;
+        public Sprite ConnectorIndicatorSprite;
+
+        //private GameObject DisplayConnector;
+
+        protected void TurnOnDisplayConnector()
+        {
+            foreach (var childConnector in ChildConnectors)
+            {
+                SpriteRenderer var = childConnector.NodeGO.AddComponent<SpriteRenderer>();
+                var.sprite = ConnectorIndicatorSprite;
+                var.sortingOrder = -1;
+            }
+        }
+
+
+        protected void TurnOffDisplayConnector()
+        {
+            foreach (var childConnector in ChildConnectors)
+            {
+                SpriteRenderer var=childConnector.NodeGO.GetComponent<SpriteRenderer>();
+                Destroy(var);
+            }
+        }
 
         protected void LiveUpdateConnectorPos(Transform[] offsetTransform)
         {
             Debug.Assert(offsetTransform.Length==ChildConnectors.Length);
             for (var i = 0; i < ChildConnectors.Length; i++)
             {
-                ChildConnectors[i].PhysicalXyOffsetToHost = offsetTransform[i].localPosition;
+                ChildConnectors[i].LocalTransformFromHost = offsetTransform[i];
             }
         }
 
         protected void SetUpConnectable(Transform parentTransform, Transform[] offsetTransform)
         {
-            Vector2 parentOffset = parentTransform.localPosition;
-            if (offsetTransform != null)
-            {
-                if (offsetTransform.Length > 0)
-                {
-                    Vector2[] offsetList = new Vector2[offsetTransform.Length];
-                    for (var i = 0; i < offsetTransform.Length; i++)
-                    {
-                        offsetList[i] = offsetTransform[i].localPosition;
-                    }
-                    SetUpConnectable(parentOffset, offsetList);
-                    return;
-                }
-            }
-            SetUpConnectable(parentOffset, null);
-        }
-
-        protected void SetUpConnectable(Vector2 parentOffset = default, Vector2[] offsetList = null)
-        {
-            //Debug.Assert(ConnectorCount > 0);
             ParentConnector = new Connector
             {
-                PhysicalXyOffsetToHost = parentOffset, Host = this
+                LocalTransformFromHost = parentTransform,
+                Host = this
             };
-            if (offsetList != null)
+            if (offsetTransform != null)
             {
-                ChildConnectors = new Connector[offsetList.Length];
+                ChildConnectors = new Connector[offsetTransform.Length];
                 for (var i = 0; i < ChildConnectors.Length; i++)
                 {
                     ChildConnectors[i] = new Connector();
-                    if (i < offsetList.Length)
+                    if (i < offsetTransform.Length)
                     {
-                        ChildConnectors[i].PhysicalXyOffsetToHost = offsetList[i];
+                        ChildConnectors[i].LocalTransformFromHost = offsetTransform[i];
                     }
 
                     ChildConnectors[i].Host = this;
@@ -90,11 +97,13 @@ namespace GunShop
             if (!IsRootConnectable)
             {
                 System.Diagnostics.Debug.Assert(ParentConnector != null, nameof(ParentConnector) + " != null");
-                Vector3 targetPos = ParentConnector.OtherConnector.Host.transform.position;
-                Vector2 otherOffset = ParentConnector.OtherConnector.PhysicalXyOffsetToHost;
-                otherOffset -= ParentConnector.PhysicalXyOffsetToHost;
-                targetPos += new Vector3(otherOffset.x, otherOffset.y, 0);
-                this.transform.position = targetPos;
+
+                Vector3 parentConnectionRot = ParentConnector.OtherConnector.LocalTransformFromHost.eulerAngles;
+                Vector3 localRotOffset = ParentConnector.LocalTransformFromHost.eulerAngles - this.transform.localEulerAngles;
+                this.transform.eulerAngles = parentConnectionRot - localRotOffset;
+                Vector3 parentConnectionPos = ParentConnector.OtherConnector.LocalTransformFromHost.position;
+                Vector3 localPosOffset = ParentConnector.LocalTransformFromHost.position - this.transform.position;
+                this.transform.position = parentConnectionPos - localPosOffset;
             }
 
             if (AllowSubConnection)
@@ -160,8 +169,7 @@ namespace GunShop
         {
             SetUpConnectable(default, new[]
             {
-                new Vector2(CoreConnectorTransform.transform.localPosition.x,
-                    CoreConnectorTransform.transform.localPosition.y),
+                CoreConnectorTransform,
             });
             InitWeapon();
             coreSpriteRenderer = SpriteTransform.GetComponent<SpriteRenderer>();

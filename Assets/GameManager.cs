@@ -14,8 +14,8 @@ namespace GunShop
         void Start()
         {
             Connector.ConnectConnector(host.ChildConnectors[0], device.ParentConnector);
-            Connector.ConnectConnector(device.ChildConnectors[0], device_sub.ParentConnector);
-            Connector.ConnectConnector(device.ChildConnectors[1], device_sub1.ParentConnector);
+            //Connector.ConnectConnector(device.ChildConnectors[0], device_sub.ParentConnector);
+            //Connector.ConnectConnector(device.ChildConnectors[1], device_sub1.ParentConnector);
         }
 
         // Update is called once per frame

@@ -42,7 +42,9 @@ namespace GunShop
         public bool LiveNodeAdj = false;
 
         public abstract bool InitWeaponComponent();
-   
+
+        protected Rigidbody2D ComponentRigidBody2D;
+
         protected virtual bool InitWeaponComponent(WeaponComponentType type)
         {
             SetUpConnectable(ParentConnectorTransform, ChildrenConnectorTransform);
@@ -66,6 +68,16 @@ namespace GunShop
             return true;
         }*/
 
+        public void OnMouseEnter()
+        {
+            TurnOnDisplayConnector();
+        }
+
+        public void OnMouseExit()
+        {
+            TurnOffDisplayConnector();
+        }
+
         public void Awake()
         {
 #if !UNITY_EDITOR
@@ -74,6 +86,16 @@ namespace GunShop
             InitWeaponComponent();
             ComponentSpriteRenderer = SpriteTransform.GetComponent<SpriteRenderer>();
             ComponentSpriteRenderer.sprite = ComponentSprite;
+
+            ComponentRigidBody2D = gameObject.AddComponent<Rigidbody2D>();
+            ComponentRigidBody2D.bodyType = RigidbodyType2D.Static;
+            //collider;
+        }
+
+        public void Start()
+        {
+            //TurnOnDisplayConnector();
+            //TurnOffDisplayConnector();
         }
 
         public void Update()
