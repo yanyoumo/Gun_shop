@@ -4,14 +4,15 @@ using UnityEngine;
 
 namespace GunShop
 {
-    public class CystalAdditionComponent : WeaponComponentBase
+    public class CrystalAdditionComponent : WeaponComponentBase
     {
-        public new const int ConnectorCount = 0;
         public override bool AllowSubConnection => false;
 
         public override bool InitWeaponComponent()
         {
-            return this.InitWeaponComponent(WeaponComponentType.Additional);
+            bool res=this.InitWeaponComponent(WeaponComponentType.Additional);
+            ParentConnector.UseFullConnector = false;
+            return res;
         }
     }
 }

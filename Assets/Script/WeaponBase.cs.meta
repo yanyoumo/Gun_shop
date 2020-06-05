@@ -4,8 +4,11 @@ MonoImporter:
   externalObjects: {}
   serializedVersion: 2
   defaultReferences:
+  - ConnectorPrefabTemplate: {fileID: 1501424712172759900, guid: 373b5eeffc125874d866868b9d545ec3,
+      type: 3}
   - ConnectorIndicatorSprite: {fileID: 21300000, guid: 483133f63bbaa8c42b8f047a419391dd,
       type: 3}
+  - RootIndicatorSpriteRenderer: {instanceID: 0}
   - CoreSprite: {instanceID: 0}
   - SpriteTransform: {instanceID: 0}
   - CoreConnectorTransform: {instanceID: 0}

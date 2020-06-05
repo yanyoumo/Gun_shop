@@ -35,6 +35,8 @@ namespace GunShop
         public Transform[] ChildrenConnectorTransform;
         protected SpriteRenderer ComponentSpriteRenderer;
 
+        public virtual bool ConnectedToParent => ParentConnector.Device != null;
+
         public sealed override bool IsRootConnectable => false;
         //public sealed override bool IsRootConnectable => false;
         public WeaponComponentType ComponentType { protected set; get; }
@@ -43,7 +45,8 @@ namespace GunShop
 
         public abstract bool InitWeaponComponent();
 
-        protected Rigidbody2D ComponentRigidBody2D;
+        public override PolygonCollider2D MainCollider2D => ComponentSpriteRenderer.GetComponent<PolygonCollider2D>();
+
 
         protected virtual bool InitWeaponComponent(WeaponComponentType type)
         {
@@ -68,28 +71,21 @@ namespace GunShop
             return true;
         }*/
 
-        public void OnMouseEnter()
-        {
-            TurnOnDisplayConnector();
-        }
-
-        public void OnMouseExit()
+        /*public void OnMouseExit()
         {
             TurnOffDisplayConnector();
-        }
+        }*/
 
-        public void Awake()
+        public new void Awake()
         {
+            base.Awake();
 #if !UNITY_EDITOR
             LiveNodeAdj = false;
+
 #endif
-            InitWeaponComponent();
             ComponentSpriteRenderer = SpriteTransform.GetComponent<SpriteRenderer>();
             ComponentSpriteRenderer.sprite = ComponentSprite;
-
-            ComponentRigidBody2D = gameObject.AddComponent<Rigidbody2D>();
-            ComponentRigidBody2D.bodyType = RigidbodyType2D.Static;
-            //collider;
+            InitWeaponComponent();
         }
 
         public void Start()
@@ -98,8 +94,9 @@ namespace GunShop
             //TurnOffDisplayConnector();
         }
 
-        public void Update()
+        public override void Update()
         {
+            base.Update();
 #if UNITY_EDITOR
             if (LiveNodeAdj)
             {
