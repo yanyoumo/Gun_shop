@@ -116,8 +116,9 @@ namespace GunShop
         private Vector3 _mouseDragOffset = Vector3.zero;
 
         public abstract PolygonCollider2D MainCollider2D {get;}
+        public static bool NewConnectionStopper { protected set; get; } = false;
 
-        public bool ConnectableActive
+        public bool ConnectableDirectActive
         {
             get
             {
@@ -129,6 +130,33 @@ namespace GunShop
             }
         }
 
+        public bool ConnectableActive
+        {
+            get
+            {
+                if (IsRootConnectable)
+                {
+                    return true;
+                }
+
+                return ParentConnector.Device != null && ParentConnector.Device.ConnectableActive;
+            }
+        }
+
+        public Connectable RemoteParent
+        {
+            get
+            {
+                if (IsRootConnectable)
+                {
+                    return this;
+                }
+                else
+                {
+                    return ParentConnector.Device == null ? null : ParentConnector.Device.RemoteParent;
+                }
+            }
+        }
 
         protected bool DisplayEmptyChildConnector
         {
@@ -176,6 +204,48 @@ namespace GunShop
             }
         }
 
+        public static bool SameChainDuplex(Connectable A, Connectable B)
+        {
+            return SameChainSimplex(A, B) || SameChainSimplex(B, A);
+        }
+
+        public static bool SameChainSimplex(Connectable host, Connectable device)
+        {
+            if (host == device)
+            {
+                return true;
+            }
+
+            System.Diagnostics.Debug.Assert(device != null, nameof(device) + " != null");
+            System.Diagnostics.Debug.Assert(host != null, nameof(host) + " != null");
+
+            if (device.IsRootConnectable)
+            {
+                return false;
+            }
+
+            if (device.ParentConnector.Device == host)
+            {
+                return true;
+            }
+
+            if (!host.AllowSubConnection)
+            {
+                return false;
+            }
+
+            bool res = false;
+            foreach (var hostChildConnector in host.ChildConnectors)
+            {
+                if (hostChildConnector.Device != null)
+                {
+                    res |= SameChainSimplex(hostChildConnector.Device, device);
+                }
+            }
+
+            return res;
+        }
+
         public virtual void Awake()
         {
             Destroy(RootIndicatorSpriteRenderer);
@@ -183,20 +253,64 @@ namespace GunShop
             ComponentRigidBody2D.bodyType = RigidbodyType2D.Static;
         }
 
-        public virtual void Update()
+        private void UpdateColliderSwitch()
         {
+            //flags:
+            //draggingButNotSelf
+            //ConnectableActive
+            //IsRootConnectable
             bool draggingButNotSelf = GameManager.DraggingConnectableNotNullNeitherSelf(this);
-            if (ConnectableActive)
+            bool draggingAnything = GameManager.DraggingAnyConnectable;
+            if (IsRootConnectable)
             {
                 DisplayEmptyChildConnector = draggingButNotSelf;
                 EnableEmptyChildConnectorCollider = draggingButNotSelf;
                 EnableEmptyParentConnectorCollider = draggingButNotSelf;
-                MainCollider2D.enabled = IsRootConnectable;
+                MainCollider2D.enabled = !draggingAnything;
             }
             else
             {
-                MainCollider2D.enabled = !GameManager.DraggingAnyConnectable;
+                if (ConnectableActive)
+                {
+                    if (draggingAnything)
+                    {
+                        if (SameChainDuplex(this, GameManager.DraggingConnectable))
+                        {
+                            DisplayEmptyChildConnector = false;
+                            EnableEmptyChildConnectorCollider = false;
+                        }
+                        else
+                        {
+                            DisplayEmptyChildConnector = draggingButNotSelf;
+                            EnableEmptyChildConnectorCollider = draggingButNotSelf;
+                        }
+                    }
+                    else
+                    {
+                        DisplayEmptyChildConnector = false;
+                        EnableEmptyChildConnectorCollider = false;
+                    }
+                    EnableEmptyParentConnectorCollider = false;
+                }
+                else
+                {
+                    EnableEmptyChildConnectorCollider = false;
+                    EnableEmptyParentConnectorCollider = false;
+                    DisplayEmptyChildConnector = false;
+                }
+                MainCollider2D.enabled = !draggingAnything;
             }
+        }
+
+        private void ClearUpDragging()
+        {
+            GameManager.DraggingConnectable = null;
+            _mouseDragOffset = Vector3.zero;
+        }
+
+        public virtual void Update()
+        {
+            UpdateColliderSwitch();
         }
 
         private bool IsMineConnector(Connector hoveredConnector, int idx)
@@ -225,8 +339,9 @@ namespace GunShop
                     {
                         if (ChildConnectors[idx].Device == null)
                         {
-                            Debug.Log(this.name);
                             Connector.ConnectConnector(ChildConnectors[idx], GameManager.DraggingParentConnector);
+                            ClearUpDragging();
+                            NewConnectionStopper = true;
                         }
                     }
                 }
@@ -325,8 +440,9 @@ namespace GunShop
 
         public virtual void OnMouseEnter()
         {
-            if (IsRootConnectable)
+            /*if (IsRootConnectable)
             {
+                Debug.Log("");
                 if (Input.GetKey(KeyCode.Mouse0))
                 {
                     if (GameManager.DraggingConnectable != this)
@@ -335,34 +451,67 @@ namespace GunShop
                         GameManager.DraggingConnectable = null;
                     }
                 }
-            }
-            else
-            {
-                //TurnOnDisplayConnector();
-            }
+            }*/
         }
 
-        public virtual void OnMouseDrag()
+        private void BeingDraggedOrRemoteDrag(Connectable remoteBeingDraggedConnector = null)
         {
-            if (GameManager.DraggingConnectable == null || GameManager.DraggingConnectable == this)
+            if (remoteBeingDraggedConnector != null)
+            {
+                Debug.Assert(SameChainDuplex(this, remoteBeingDraggedConnector));
+                if (GameManager.DraggingConnectable == null)
+                {
+                    _mouseDragOffset = this.transform.position - GetMouseWorldPos;
+                    GameManager.DraggingConnectable = remoteBeingDraggedConnector;
+                }
+                else if (GameManager.DraggingConnectable == remoteBeingDraggedConnector)
+                {
+                    this.transform.position = GetMouseWorldPos + _mouseDragOffset;
+                }
+            }
+            else
             {
                 if (GameManager.DraggingConnectable == null)
                 {
                     _mouseDragOffset = this.transform.position - GetMouseWorldPos;
                     GameManager.DraggingConnectable = this;
-                    //MainCollider2D.enabled = false;
                 }
-                this.transform.position = GetMouseWorldPos + _mouseDragOffset;
+                else if (GameManager.DraggingConnectable == this)
+                {
+                    this.transform.position = GetMouseWorldPos + _mouseDragOffset;
+                }
+            }
+        }
+
+        public virtual void OnMouseDrag()
+        {
+            if (ConnectableActive)
+            {
+                if (!NewConnectionStopper)
+                {
+                    RemoteParent.BeingDraggedOrRemoteDrag(this);
+                }
+                else
+                {
+                    //Debug.Log("");
+                }
+            }
+            else
+            {
+                BeingDraggedOrRemoteDrag();
             }
         }
 
         public virtual void OnMouseUp()
         {
+            if (NewConnectionStopper)
+            {
+                NewConnectionStopper = false;
+            }
+
             if (GameManager.DraggingConnectable == this)
             {
-                GameManager.DraggingConnectable = null;
-                _mouseDragOffset = Vector3.zero;
-                //MainCollider2D.enabled = true;
+                ClearUpDragging();
             }
         }
 

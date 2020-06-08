@@ -37,6 +37,23 @@ namespace GunShop
             return false;
         }
 
+        public static bool DraggingSelf(Connectable self)
+        {
+            return DraggingConnectable == self;
+        }
+
+        public static bool DraggingSelfOrChainMember(Connectable self)
+        {
+            if (DraggingSelf(self))
+            {
+                return true;
+            }
+            else
+            {
+                return Connectable.SameChainDuplex(self, DraggingConnectable);
+            }
+        }
+
         void Start()
         {
             Connector.ConnectConnector(host.ChildConnectors[0], device.ParentConnector);

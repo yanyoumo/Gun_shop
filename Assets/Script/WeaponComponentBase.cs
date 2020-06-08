@@ -26,6 +26,18 @@ namespace GunShop
         Additional,
     }
 
+    public static class WeaponEntries
+    {
+        public static string WeaponEntry0 = "WeaponEntry_0";
+        public static string WeaponEntry1 = "WeaponEntry_1";
+        public static string WeaponEntry2 = "WeaponEntry_2";
+
+        public static bool CheckIfExclusive(WeaponCoreType coreType, string entry)
+        {
+            return true;
+        }
+    }
+
     public abstract class WeaponComponentBase : Connectable
     {
         public Sprite ComponentSprite;
@@ -38,15 +50,17 @@ namespace GunShop
         public virtual bool ConnectedToParent => ParentConnector.Device != null;
 
         public sealed override bool IsRootConnectable => false;
-        //public sealed override bool IsRootConnectable => false;
+
+        public float AdditionalCost;
         public WeaponComponentType ComponentType { protected set; get; }
+        public Dictionary<WeaponAdditionalProperties, float> ComponentAdditionalProperties { protected set; get; }
+        public HashSet<string> ComponentAdditionalEntries { protected set; get; }
 
         public bool LiveNodeAdj = false;
 
         public abstract bool InitWeaponComponent();
 
         public override PolygonCollider2D MainCollider2D => ComponentSpriteRenderer.GetComponent<PolygonCollider2D>();
-
 
         protected virtual bool InitWeaponComponent(WeaponComponentType type)
         {
